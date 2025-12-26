@@ -65,7 +65,12 @@ const $$ = document.querySelectorAll.bind(document);
 
 function Modal() {
     this.openModal = (options = {}) => {
-        const { templateId } = options;
+        /*
+        Vì <template> được thiết kế để chứa nội dung 
+        HTML “chưa render”, nên trình duyệt đưa nội dung 
+        của nó vào DocumentFragment.
+        */
+        const { templateId, allowBackdropClose = true } = options;
         const template = $(`#${templateId}`);
 
         if (!template) {
@@ -73,6 +78,9 @@ function Modal() {
             return;
         }
 
+        // Lí do sử dụng cloneNode
+        // 1. Để sao chép phần tử mà ko sao chép xử lý sự kiện DOM
+        // 2. Để tái sử dụng template nhiều lần
         const content = template.content.cloneNode(true);
 
         // Create modal elements
@@ -103,23 +111,33 @@ function Modal() {
         // Attach event listeners
         closeBtn.onclick = () => this.closeModal(backdrop);
 
-        backdrop.onclick = (event) => {
-            if (event.target === backdrop) {
-                this.closeModal(backdrop);
-            }
-        };
+        if (allowBackdropClose) {
+            backdrop.onclick = (event) => {
+                if (event.target === backdrop) {
+                    this.closeModal(backdrop);
+                }
+            };
+        }
 
         document.addEventListener("keydown", function (event) {
             if (event.key === "Escape") {
                 this.closeModal(backdrop);
             }
         });
+
+        // Disable scrolling
+        document.body.classList.add("no-scroll");
+
+        return backdrop;
     };
 
     this.closeModal = (modalElement) => {
         modalElement.classList.remove("show");
         modalElement.ontransitionend = () => {
             modalElement.remove();
+
+            // Enable scrolling
+            document.body.classList.remove("no-scroll");
         };
     };
 }
@@ -127,13 +145,30 @@ function Modal() {
 const modal = new Modal();
 
 $("#open-modal-1").onclick = function () {
-    modal.openModal({
+    const modalElement = modal.openModal({
         templateId: "modal-1",
     });
+
+    const img = modalElement.querySelector("img");
+    console.log(img);
 };
 
 $("#open-modal-2").onclick = function () {
-    modal.openModal({
+    const modalElement = modal.openModal({
         templateId: "modal-2",
+        allowBackdropClose: false,
     });
+
+    const form = modalElement.querySelector("#login-form");
+    if (form) {
+        form.onsubmit = function (event) {
+            event.preventDefault();
+            const formData = {
+                email: $("#email").value.trim(),
+                password: $("#password").value.trim(),
+            };
+
+            console.log(formData);
+        };
+    }
 };
