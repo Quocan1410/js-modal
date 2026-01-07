@@ -64,7 +64,7 @@ const $$ = document.querySelectorAll.bind(document);
 // });
 
 function Modal(options = {}) {
-    const { templateId, destroyOnClose = true, cssClass = [], closeMethods = ["button", "overlay", "escape"] } = options;
+    const { templateId, destroyOnClose = true, cssClass = [], closeMethods = ["button", "overlay", "escape"], onOpen, onClose } = options;
     const template = $(`#${templateId}`);
 
     if (!template) {
@@ -178,12 +178,22 @@ function Modal(options = {}) {
         document.body.classList.add("no-scroll");
         document.body.style.paddingRight = `${getScrollBarWidth()}px`;
 
+        this._backdrop.ontransitionend = (e) => {
+            if (e.propertyName !== "transform") return;
+            if (typeof onOpen === "function") {
+                onOpen();
+            }
+        };
+
         return this._backdrop;
     };
 
     this.close = (destroy = destroyOnClose) => {
         this._backdrop.classList.remove("show");
-        this._backdrop.ontransitionend = () => {
+        this._backdrop.ontransitionend = (e) => {
+            if (e.propertyName !== "transform") return;
+
+            // Remove modal from DOM
             if (this._backdrop && destroy) {
                 this._backdrop.remove();
                 this._backdrop = null;
@@ -192,6 +202,10 @@ function Modal(options = {}) {
             // Enable scrolling
             document.body.classList.remove("no-scroll");
             document.body.style.paddingRight = "";
+
+            if (typeof onClose === "function") {
+                onClose();
+            }
         };
     };
 
